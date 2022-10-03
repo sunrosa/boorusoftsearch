@@ -10,28 +10,30 @@ async fn main() {
     let mut results = std::vec::Vec::<(i32, gb::api::Post)>::new();
 
     let client = gb::Client::public();
-    let post_query = gb::posts()
-        .limit(20)
-        .random(true)
-        .send(&client)
-        .await
-        .unwrap();
+    let post_query = gb::posts().random(true).send(&client).await.unwrap();
 
     for post in post_query.posts {
-        results.push((evaluate(&post.tags(), &mut scores), post))
+        results.push((evaluate(&post, &mut scores), post))
     }
 
     results.sort_by(|a, b| b.0.cmp(&a.0));
 
     for result in results {
-        println!("{}: https://gelbooru.com/index.php?page=post&s=view&id={}", result.0, result.1.id());
+        println!(
+            "{}: https://gelbooru.com/index.php?page=post&s=view&id={}",
+            result.0,
+            result.1.id()
+        );
     }
 }
 
-fn evaluate(tags: &Vec<&str>, scores: &mut HashMap<String, i32>) -> i32 {
+fn evaluate(post: &gb::api::Post, scores: &mut HashMap<String, i32>) -> i32 {
     let mut evaluation: i32 = 0;
-    for tag in tags {
+    for tag in post.tags() {
         evaluation += *scores.entry(tag.to_string()).or_default(); // No clue in hell why it requires a mutable reference for something that I DO NOT mutate. But it does.
     }
+
+    evaluation += *scores.entry(format!("rating:{}", post.rating)).or_default();
+
     return evaluation;
 }
